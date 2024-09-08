@@ -16,6 +16,10 @@ SPACESHIP_MAVEN_VERSION_SYMBOL="${SPACESHIP_MAVEN_VERSION_SYMBOL="🪶"}"
 SPACESHIP_MAVEN_VERSION_COLOR="${SPACESHIP_MAVEN_VERSION_COLOR="yellow"}"
 
 SPACESHIP_MAVEN_VERSION_SHORTEN_SNAPSHOT="${SPACESHIP_MAVEN_VERSION_SHORTEN_SNAPSHOT=true}"
+SPACESHIP_MAVEN_VERSION_DYNAMIC="${SPACESHIP_MAVEN_VERSION_DYNAMIC=true}"
+if [ -z "$SPACESHIP_MAVEN_VERSION_DYNAMIC_VERSIONS" ]; then
+  SPACESHIP_MAVEN_VERSION_DYNAMIC_VERSIONS=("0")
+fi
 
 SPACESHIP_MAVEN_ARTIFACT_SHOW="${SPACESHIP_MAVEN_ARTIFACT_SHOW=dir-different}"
 SPACESHIP_MAVEN_ARTIFACT_ASYNC="${SPACESHIP_MAVEN_ARTIFACT_ASYNC=true}"
@@ -45,6 +49,24 @@ spaceship_maven_version() {
     maven_version="${parts[1]}"
   else
     maven_version="pom!"
+  fi
+
+  if [[ $SPACESHIP_MAVEN_VERSION_DYNAMIC != false ]]; then
+    local need_dynamic=false
+    for candidate in "${SPACESHIP_MAVEN_VERSION_DYNAMIC_VERSIONS[@]}"; do
+      if [[ $maven_version == $candidate ]]; then
+        need_dynamic=true
+      fi
+    done
+    if [[ $need_dynamic != false ]]; then
+      local maven_exe=$(spaceship::upsearch mvnw)
+      if [[ -z $maven_exe ]] && spaceship::exists mvn; then
+        maven_exe="mvn"
+      fi
+      if [[ -n $maven_exe ]]; then
+        maven_version=$($maven_exe help:evaluate -q -DforceStdout -D"expression=project.version" 2>/dev/null | sed 's/\x1B.*$//g')
+      fi
+    fi
   fi
 
   if [[ $SPACESHIP_MAVEN_VERSION_SHORTEN_SNAPSHOT != false ]]; then
